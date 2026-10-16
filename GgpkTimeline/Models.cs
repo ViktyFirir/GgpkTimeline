@@ -1,5 +1,5 @@
 namespace GgpkTimeline;
-
+ 
 /// <summary>Корень файла Data/timeline.json</summary>
 public class TimelineData
 {
@@ -7,7 +7,7 @@ public class TimelineData
     public string FutureTitle { get; set; } = "Всё ещё впереди!";
     public List<Period> Periods { get; set; } = new();
 }
-
+ 
 /// <summary>Одна эпоха (десятилетие) на таймлайне</summary>
 public class Period
 {
@@ -16,5 +16,13 @@ public class Period
     public string Title { get; set; } = "";         // заголовок карточки
     public string Text { get; set; } = "";          // короткий текст карточки
     public List<string> Details { get; set; } = new(); // подробности (для будущей страницы)
-    public string Image { get; set; } = "";         // путь к картинке (для будущей страницы)
+    public List<PeriodImage> Images { get; set; } = new(); // картинки периода с описаниями (для будущей страницы)
+}
+ 
+/// <summary>Картинка периода: файл + заголовок + описание (подпись)</summary>
+public class PeriodImage
+{
+    public string File { get; set; } = "";          // путь к файлу относительно папки с exe, например Images/Years/1956.png
+    public string Title { get; set; } = "";         // короткий заголовок картинки
+    public string Description { get; set; } = "";   // описание / подпись под картинкой
 }
