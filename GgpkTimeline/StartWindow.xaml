@@ -1,0 +1,168 @@
+﻿<Window x:Class="GgpkTimeline.StartWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Политех через года"
+        Width="1280" Height="720"
+        MinWidth="640" MinHeight="360"
+        WindowStartupLocation="CenterScreen"
+        Background="#061949"
+        UseLayoutRounding="True"
+        KeyDown="Window_KeyDown">
+
+    <Window.Resources>
+        <!-- ===== Шрифты Montserrat (папка Fonts, Build Action = Resource) ===== -->
+        <FontFamily x:Key="MontExtraBold">pack://application:,,,/Fonts/#Montserrat ExtraBold</FontFamily>
+        <FontFamily x:Key="MontSemiBold">pack://application:,,,/Fonts/#Montserrat SemiBold</FontFamily>
+        <FontFamily x:Key="MontMedium">pack://application:,,,/Fonts/#Montserrat Medium</FontFamily>
+
+        <!-- ===== Цвета ===== -->
+        <SolidColorBrush x:Key="OrangeBrush" Color="#E66737"/>
+        <SolidColorBrush x:Key="BlueBrush" Color="#215CF0"/>
+        <SolidColorBrush x:Key="SubtitleBrush" Color="#F0E6D8"/>
+
+        <!-- ===== Стиль кнопки-"таблетки" с анимацией наведения ===== -->
+        <Style x:Key="PillButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="{StaticResource MontMedium}"/>
+            <Setter Property="FontSize" Value="52"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="Scale" ScaleX="1" ScaleY="1"/>
+                            </Grid.RenderTransform>
+
+                            <Border x:Name="Bg"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="30">
+                                <Border.Effect>
+                                    <DropShadowEffect x:Name="Glow" Color="Black" Opacity="0"
+                                                      BlurRadius="30" ShadowDepth="8" Direction="270"/>
+                                </Border.Effect>
+                            </Border>
+
+                            <Border x:Name="Shine" Background="White" Opacity="0"
+                                    CornerRadius="30" IsHitTestVisible="False"/>
+
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleX" To="1.06" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleY" To="1.06" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetName="Shine" Storyboard.TargetProperty="Opacity" To="0.12" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="Shine" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ===== Стиль логотипа: лёгкое увеличение при наведении ===== -->
+        <Style x:Key="LogoStyle" TargetType="Image">
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.08" Duration="0:0:0.2"/>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.08" Duration="0:0:0.2"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.25"/>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.25"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Viewbox Stretch="Uniform">
+        <Canvas Width="1920" Height="1080" ClipToBounds="True">
+
+            <!-- Фон (рамка уже нарисована на картинке) -->
+            <Image Source="Assets/Start/PreMain.png"
+                   Width="1920" Height="1080" Stretch="Fill"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+
+            <!-- Логотип на верхней линии рамки -->
+            <Grid x:Name="LogoHost" Canvas.Left="860" Canvas.Top="42" Width="200" Height="153">
+                <Image Source="Assets/Start/LOGO.png" Stretch="Uniform"
+                       Style="{StaticResource LogoStyle}"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Grid>
+
+            <!-- Подзаголовок -->
+            <TextBlock x:Name="Subtitle"
+                       Canvas.Left="0" Canvas.Top="247" Width="1920"
+                       TextAlignment="Center"
+                       FontFamily="{StaticResource MontSemiBold}"
+                       FontSize="60"
+                       LineStackingStrategy="BlockLineHeight" LineHeight="56"
+                       Foreground="{StaticResource SubtitleBrush}">
+                Судьба малой родины в<LineBreak/>объективе технологий
+            </TextBlock>
+
+            <!-- Заголовок -->
+            <TextBlock x:Name="TitleText"
+                       Canvas.Left="0" Canvas.Top="400" Width="1920"
+                       TextAlignment="Center"
+                       FontFamily="{StaticResource MontExtraBold}"
+                       FontSize="146"
+                       LineStackingStrategy="BlockLineHeight" LineHeight="160"
+                       Foreground="White">
+                Политех через<LineBreak/>года
+            </TextBlock>
+
+            <!-- Кнопки -->
+            <Button x:Name="StartButton"
+                    Canvas.Left="549" Canvas.Top="775" Width="399" Height="101"
+                    Content="Начать"
+                    Background="{StaticResource OrangeBrush}"
+                    Style="{StaticResource PillButton}"
+                    Click="StartButton_Click"/>
+
+            <Button x:Name="AboutButton"
+                    Canvas.Left="971" Canvas.Top="775" Width="399" Height="101"
+                    Content="О проекте"
+                    Background="{StaticResource BlueBrush}"
+                    Style="{StaticResource PillButton}"
+                    Click="AboutButton_Click"/>
+        </Canvas>
+    </Viewbox>
+</Window>
