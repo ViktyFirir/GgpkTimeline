@@ -1,0 +1,69 @@
+<UserControl x:Class="GgpkTimeline.Controls.TimelineSection"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="1800" Height="1080">
+    <Canvas>
+
+        <!-- Большой год -->
+        <TextBlock x:Name="YearText"
+                   Canvas.Left="820" Canvas.Top="345"
+                   Text="1970"
+                   FontFamily="{StaticResource HeavyFont}" FontWeight="ExtraBold" FontSize="330"
+                   Foreground="#FFF8F0" Background="Transparent"
+                   Opacity="0" RenderTransformOrigin="0.5,0.5"
+                   MouseEnter="Year_MouseEnter" MouseLeave="Year_MouseLeave">
+            <TextBlock.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform x:Name="YearShift" X="120" Y="0"/>
+                    <ScaleTransform x:Name="YearScale" ScaleX="1" ScaleY="1"/>
+                </TransformGroup>
+            </TextBlock.RenderTransform>
+        </TextBlock>
+
+        <!-- Карточка -->
+        <Grid x:Name="Card" Canvas.Left="120" Canvas.Top="153" Width="660" Height="610"
+              Opacity="0" RenderTransformOrigin="0.5,0.5"
+              MouseEnter="Card_MouseEnter" MouseLeave="Card_MouseLeave">
+            <Grid.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform x:Name="CardShift" X="0" Y="70"/>
+                    <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
+                </TransformGroup>
+            </Grid.RenderTransform>
+
+            <Border CornerRadius="26" Background="#E6041339"
+                    BorderBrush="#4DB4C3E6" BorderThickness="2"/>
+            <Border x:Name="Glow" CornerRadius="26" BorderBrush="#B3DCEBFF" BorderThickness="2"
+                    Opacity="0" IsHitTestVisible="False"/>
+
+            <Grid Margin="44,40,44,48">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock x:Name="TitleText" Grid.Row="0"
+                           Text="Заголовок"
+                           FontFamily="{StaticResource MainFont}" FontWeight="SemiBold" FontSize="56"
+                           LineHeight="54" LineStackingStrategy="BlockLineHeight"
+                           Foreground="#D9EEFF" TextWrapping="Wrap"/>
+
+                <TextBlock x:Name="BodyText" Grid.Row="1"
+                           Text="Текст"
+                           Margin="0,30,0,0"
+                           FontFamily="{StaticResource MainFont}" FontWeight="Normal" FontSize="35"
+                           LineHeight="35" LineStackingStrategy="BlockLineHeight"
+                           Foreground="#B9C4DE" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+
+                <Button x:Name="DetailsButton" Grid.Row="2"
+                        Content="Читать подробнее"
+                        Style="{StaticResource CardButtonStyle}"
+                        Width="430" Height="64" Margin="0,25,0,0"
+                        HorizontalAlignment="Left"
+                        Click="DetailsButton_Click"/>
+            </Grid>
+        </Grid>
+
+    </Canvas>
+</UserControl>

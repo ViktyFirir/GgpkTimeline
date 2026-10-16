@@ -1,11 +1,15 @@
 <Window x:Class="GgpkTimeline.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="clr-namespace:GgpkTimeline.Controls"
         Title="ГГПК через года"
         WindowState="Maximized" WindowStyle="None" ResizeMode="NoResize"
         Background="{StaticResource NavyBrush}"
         FontFamily="{StaticResource MainFont}"
-        Loaded="Window_Loaded" KeyDown="Window_KeyDown">
+        Loaded="Window_Loaded" KeyDown="Window_KeyDown"
+        PreviewMouseWheel="Window_PreviewMouseWheel"
+        PreviewMouseLeftButtonDown="Window_PreviewMouseDown"
+        PreviewMouseLeftButtonUp="Window_PreviewMouseUp">
 
     <Grid>
         <!-- Фон: PreMain.png (1920x1080 на экране, пикселей больше - для чёткости) -->
@@ -17,16 +21,24 @@
         <Viewbox Stretch="Uniform">
             <Grid x:Name="Stage" Width="1920" Height="1080" ClipToBounds="True">
 
-                <!-- ПРОКРУЧИВАЕМАЯ часть: силуэт города + карточки + годы -->
-                <ScrollViewer x:Name="Scroller"
-                              HorizontalScrollBarVisibility="Hidden"
-                              VerticalScrollBarVisibility="Disabled"
-                              PanningMode="HorizontalOnly"
-                              Focusable="False"
-                              ScrollChanged="Scroller_ScrollChanged"
-                              PreviewMouseWheel="Scroller_PreviewMouseWheel">
-                    <Canvas x:Name="TimelineCanvas" Height="1080"/>
-                </ScrollViewer>
+                <!-- СЛОЙ 1 (сзади): год-барабан и финальная надпись. Стоят на месте -->
+                <Canvas x:Name="YearLayer"/>
+
+                <!-- СЛОЙ 2: город. Лежит в Canvas, иначе WPF обрезает картинку шире экрана до 1920 px -->
+                <Canvas IsHitTestVisible="False" Opacity="0.55">   <!-- прозрачность города: 0 = невидим, 1 = плотный -->
+                    <Image x:Name="City" Source="Assets/Silhouette.png" Stretch="Fill"
+                           HorizontalAlignment="Left" VerticalAlignment="Top"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Opacity="0" IsHitTestVisible="False">
+                        <Image.RenderTransform>
+                            <TranslateTransform x:Name="CityShift" X="0" Y="0"/>
+                        </Image.RenderTransform>
+                    </Image>
+                </Canvas>
+
+                <!-- СЛОЙ 3: карточка (стоит на месте, меняется только текст) -->
+                <ctl:InfoCard x:Name="Card" HorizontalAlignment="Left" VerticalAlignment="Top"
+                              Margin="120,240,0,0"/>
 
                 <!-- ЗАКРЕПЛЕНО: логотип -->
                 <Image x:Name="Logo" Source="Assets/LOGO.png"
@@ -47,13 +59,20 @@
 
                     <Border Background="{StaticResource BlueBrush}"/>
 
-                    <!-- Оранжевая линия таймлайна -->
-                    <Rectangle Fill="{StaticResource OrangeBrush}" Height="6"
-                               VerticalAlignment="Top" Margin="295,8,0,0"/>
+                    <!-- Оранжевая линия таймлайна: самый верх футера, голубого над ней не видно -->
+                    <Rectangle Height="6" VerticalAlignment="Top" Margin="295,0,0,0">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#E66635" Offset="0"/>
+                                <GradientStop Color="#E66635" Offset="0.9"/>
+                                <GradientStop Color="#00E66635" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
 
                     <!-- Оранжевый блок с названием периода -->
                     <Border Width="295" HorizontalAlignment="Left" Background="{StaticResource OrangeBrush}">
-                        <TextBlock x:Name="FooterLabel" Text="1970-ые года"
+                        <TextBlock x:Name="FooterLabel" Text="1950-ые года"
                                    Foreground="White" FontWeight="Light" FontSize="30"
                                    VerticalAlignment="Center" Margin="47,0,0,0"/>
                     </Border>

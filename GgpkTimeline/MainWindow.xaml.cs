@@ -14,40 +14,40 @@ public partial class MainWindow : Window
 {
     // ---- Размеры макета (дизайн 1920x1080) ----
     private const double StageWidth = 1920;
-    private const double SectionWidth = 1800;     // шаг между эпохами
-    private const double FooterTop = 980;         // верхняя граница футера
-    private const double SilhouetteScale = 2.45;  // масштаб силуэта города
+    private const double FooterTop = 980;      // верхняя граница футера
+    private const double CityHeight = 640;     // высота города на экране (масштаб ~2.8)
+    private const double YearLeft = 816;       // положение года
+    private const double YearTop = 305;       // выше = меньше число
+    private const double CityStretchX = 1.0;     // растяжение города по горизонтали (1.0 = как в файле)
+    private const double MinCityScreens = 2.6;   // город не уже, чем N экранов
 
-    private readonly List<TimelineSection> _sections = new();
+    private TimelineData _data = new();
     private readonly List<RadioButton> _dots = new();
     private readonly List<string> _footerLabels = new();
-    private TimelineData _data = new();
 
-    private StackPanel? _futurePanel;
-    private bool _futureRevealed;
+    private YearReel _reel = null!;
+    private TextBlock _futureText = null!;
 
-    private int _current = -1;
-    private double _targetOffset;
-    private bool _animating;
-    private int _animId;
+    private int _count;          // число эпох
+    private int _n;              // число позиций = эпохи + «всё ещё впереди»
+    private int _index;          // текущая позиция
+    private double _cityPan;     // на сколько пикселей город может сдвинуться
 
-    // ---- Свойство для плавной анимации прокрутки ----
-    public static readonly DependencyProperty ScrollPositionProperty =
-        DependencyProperty.Register(nameof(ScrollPosition), typeof(double), typeof(MainWindow),
-            new PropertyMetadata(0.0, (d, e) => ((MainWindow)d).Scroller.ScrollToHorizontalOffset((double)e.NewValue)));
+    // ---- Прогресс ленты: 0 ... (n-1). По нему сдвигается город ----
+    public static readonly DependencyProperty ProgressProperty =
+        DependencyProperty.Register(nameof(Progress), typeof(double), typeof(MainWindow),
+            new PropertyMetadata(0.0, (d, e) => ((MainWindow)d).ApplyProgress((double)e.NewValue)));
 
-    public double ScrollPosition
+    public double Progress
     {
-        get => (double)GetValue(ScrollPositionProperty);
-        set => SetValue(ScrollPositionProperty, value);
+        get => (double)GetValue(ProgressProperty);
+        set => SetValue(ProgressProperty, value);
     }
 
     public MainWindow()
     {
         InitializeComponent();
     }
-
-    private double MaxOffset => Math.Max(0, TimelineCanvas.Width - StageWidth);
 
     // =====================================================================
     //  Запуск
@@ -56,10 +56,16 @@ public partial class MainWindow : Window
     {
         if (!LoadData()) { Close(); return; }
 
-        BuildTimeline();
+        _count = _data.Periods.Count;
+        _n = _count + 1;
+
+        BuildCity();
+        BuildYear();
         BuildFooter();
+
+        Card.DetailsRequested += p => ShowToast($"«Читать подробнее» — {p.Year}: страница в разработке");
+
         PlayIntro();
-        UpdateState();
     }
 
     private bool LoadData()
@@ -87,60 +93,48 @@ public partial class MainWindow : Window
     }
 
     // =====================================================================
-    //  Построение прокручиваемой ленты
+    //  Город: одна картинка на весь проект
     // =====================================================================
-    private void BuildTimeline()
+    private void BuildCity()
     {
-        int count = _data.Periods.Count;
-        TimelineCanvas.Width = (count + 1) * SectionWidth + 120;
+        var src = (BitmapSource)City.Source;
+        double cityW = CityHeight * src.PixelWidth / src.PixelHeight * CityStretchX;
+        cityW = Math.Max(cityW, StageWidth * MinCityScreens);
 
-        // --- Силуэт города (плитки, каждая вторая отражена - стык незаметен) ---
-        var sil = new BitmapImage();
-        sil.BeginInit();
-        sil.UriSource = new Uri("pack://application:,,,/Assets/Silhouette.png");
-        sil.CacheOption = BitmapCacheOption.OnLoad;
-        sil.EndInit();
-        sil.Freeze();
+        City.Width = cityW;
+        City.Height = CityHeight;
+        City.Margin = new Thickness(0, FooterTop + 10 - CityHeight, 0, 0);   // стоит на футере
 
-        double tileW = sil.PixelWidth * SilhouetteScale;
-        double tileH = sil.PixelHeight * SilhouetteScale;
-        int tiles = (int)Math.Ceiling(TimelineCanvas.Width / tileW);
+        _cityPan = Math.Max(0, cityW - StageWidth);
+        ApplyProgress(0);
+    }
 
-        for (int k = 0; k < tiles; k++)
+    private void ApplyProgress(double p)
+    {
+        if (_n < 2) return;
+        CityShift.X = -(p / (_n - 1)) * _cityPan;
+    }
+
+    // =====================================================================
+    //  Год-барабан и финальная надпись (стоят на месте, позади города)
+    // =====================================================================
+    private void BuildYear()
+    {
+        var cream = new SolidColorBrush(Color.FromRgb(0xFF, 0xF8, 0xF0));
+
+        _reel = new YearReel((FontFamily)FindResource("HeavyFont"), 330, cream)
         {
-            var img = new Image
-            {
-                Source = sil,
-                Width = tileW,
-                Height = tileH,
-                Stretch = Stretch.Fill,
-                IsHitTestVisible = false
-            };
-            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-            if (k % 2 == 1)
-            {
-                img.RenderTransformOrigin = new Point(0.5, 0.5);
-                img.RenderTransform = new ScaleTransform(-1, 1);
-            }
-            Canvas.SetLeft(img, k * tileW);
-            Canvas.SetTop(img, FooterTop + 10 - tileH);
-            TimelineCanvas.Children.Add(img);
-        }
+            Opacity = 0,
+            RenderTransformOrigin = new Point(0.5, 0.5),
+            RenderTransform = new ScaleTransform(1, 1)
+        };
+        _reel.MouseEnter += (_, _) => ZoomYear(1.04, 250);
+        _reel.MouseLeave += (_, _) => ZoomYear(1.0, 300);
+        Canvas.SetLeft(_reel, YearLeft);
+        Canvas.SetTop(_reel, YearTop);
+        YearLayer.Children.Add(_reel);
 
-        // --- Эпохи ---
-        for (int i = 0; i < count; i++)
-        {
-            var section = new TimelineSection(_data.Periods[i]);
-            section.DetailsRequested += OnDetailsRequested;
-            Canvas.SetLeft(section, i * SectionWidth);
-            Canvas.SetTop(section, 0);
-            TimelineCanvas.Children.Add(section);
-            _sections.Add(section);
-        }
-
-        // --- Финальный экран «Всё ещё впереди!» ---
-        _futurePanel = new StackPanel { Opacity = 0, IsHitTestVisible = false };
-        _futurePanel.Children.Add(new TextBlock
+        _futureText = new TextBlock
         {
             Text = _data.FutureTitle,
             Width = 1500,
@@ -150,12 +144,25 @@ public partial class MainWindow : Window
             FontSize = 200,
             LineHeight = 215,
             LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xF8, 0xF0))
-        });
-        _futurePanel.RenderTransform = new TranslateTransform(120, 0);
-        Canvas.SetLeft(_futurePanel, count * SectionWidth + 120);
-        Canvas.SetTop(_futurePanel, 300);
-        TimelineCanvas.Children.Add(_futurePanel);
+            Foreground = cream,
+            Opacity = 0,
+            IsHitTestVisible = false,
+            RenderTransform = new TranslateTransform(80, 0)
+        };
+        Canvas.SetLeft(_futureText, 120);
+        Canvas.SetTop(_futureText, 300);
+        YearLayer.Children.Add(_futureText);
+    }
+
+    private void ZoomYear(double to, int ms)
+    {
+        var st = (ScaleTransform)_reel.RenderTransform;
+        var a = new DoubleAnimation(to, TimeSpan.FromMilliseconds(ms))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        st.BeginAnimation(ScaleTransform.ScaleXProperty, a);
+        st.BeginAnimation(ScaleTransform.ScaleYProperty, a);
     }
 
     // =====================================================================
@@ -163,22 +170,21 @@ public partial class MainWindow : Window
     // =====================================================================
     private void BuildFooter()
     {
-        int n = _data.Periods.Count + 1;           // эпохи + «всё ещё впереди»
         double first = 511, pitch = 180;           // как в макете
-        if (first + (n - 1) * pitch > 1810)        // если эпох много - сжимаем шаг
+        if (first + (_n - 1) * pitch > 1810)       // если эпох много - сжимаем шаг
         {
             first = 415;
-            pitch = (1810 - first) / (n - 1);
+            pitch = (1810 - first) / (_n - 1);
         }
 
         var mainFont = (FontFamily)FindResource("MainFont");
         var dotStyle = (Style)FindResource("DotStyle");
 
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < _n; i++)
         {
             int index = i;
             double cx = first + i * pitch;
-            bool isFuture = i == n - 1;
+            bool isFuture = i == _n - 1;
 
             var dot = new RadioButton
             {
@@ -189,7 +195,7 @@ public partial class MainWindow : Window
             };
             dot.Click += (_, _) => NavigateTo(index);
             Canvas.SetLeft(dot, cx - 24);
-            Canvas.SetTop(dot, -13);
+            Canvas.SetTop(dot, -21);               // центр кружка = центр оранжевой линии (3 px от верха)
             DotsCanvas.Children.Add(dot);
             _dots.Add(dot);
 
@@ -214,7 +220,7 @@ public partial class MainWindow : Window
             }
             label.MouseLeftButtonDown += (_, _) => NavigateTo(index);
             Canvas.SetLeft(label, cx - label.Width / 2);
-            Canvas.SetTop(label, isFuture ? 40 : 44);
+            Canvas.SetTop(label, isFuture ? 38 : 42);
             DotsCanvas.Children.Add(label);
 
             _footerLabels.Add(isFuture ? _data.FutureLabel : _data.Periods[i].FooterLabel);
@@ -236,11 +242,15 @@ public partial class MainWindow : Window
         FooterShift.BeginAnimation(TranslateTransform.YProperty,
             new DoubleAnimation(100, 0, TimeSpan.FromMilliseconds(700)) { BeginTime = TimeSpan.FromMilliseconds(150), EasingFunction = easeOut });
 
+        // Город: поднимается и проявляется
+        City.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(1000)) { BeginTime = TimeSpan.FromMilliseconds(200), EasingFunction = easeOut });
+        CityShift.BeginAnimation(TranslateTransform.YProperty,
+            new DoubleAnimation(120, 0, TimeSpan.FromMilliseconds(1100)) { BeginTime = TimeSpan.FromMilliseconds(200), EasingFunction = easeOut });
+
         // Кружки и подписи: появляются по очереди
-        int step = 0;
         for (int i = 0; i < _dots.Count; i++)
         {
-            var delay = TimeSpan.FromMilliseconds(600 + step * 70);
+            var delay = TimeSpan.FromMilliseconds(600 + i * 70);
             var st = (ScaleTransform)_dots[i].RenderTransform;
             var grow = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(450))
             {
@@ -251,108 +261,145 @@ public partial class MainWindow : Window
             st.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
 
             // подпись лежит сразу после кружка в DotsCanvas
-            var label = DotsCanvas.Children[i * 2 + 1];
-            label.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(400)) { BeginTime = delay });
-            step++;
+            DotsCanvas.Children[i * 2 + 1].BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(400)) { BeginTime = delay });
         }
+
+        // Карточка + барабаны года: стартуют с 0000 и «докручиваются» до первого года
+        var first = _data.Periods[0];
+        Card.SetInstant(first);
+        Card.ShowIn(500);
+
+        _index = 0;
+        _dots[0].IsChecked = true;
+        SetFooterLabel(0);
+
+        _reel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500)) { BeginTime = TimeSpan.FromMilliseconds(500) });
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            _reel.RollTo(first.Year, true);
+        };
+        timer.Start();
     }
 
     // =====================================================================
-    //  Навигация и прокрутка
+    //  Навигация: двигается только город, год и текст меняются на месте
     // =====================================================================
     private void NavigateTo(int index)
     {
-        index = Math.Clamp(index, 0, _dots.Count - 1);
-        double target = Math.Min(index * SectionWidth, MaxOffset);
-        AnimateScroll(target, 950);
-    }
+        index = Math.Clamp(index, 0, _n - 1);
+        if (index == _index) return;
 
-    private void AnimateScroll(double to, int ms)
-    {
-        int id = ++_animId;
-        _animating = true;
-        _targetOffset = to;
+        int old = _index;
+        _index = index;
+        _dots[index].IsChecked = true;
+        SetFooterLabel(index);
 
-        var anim = new DoubleAnimation(Scroller.HorizontalOffset, to, TimeSpan.FromMilliseconds(ms))
+        // 1) город уезжает
+        var move = new DoubleAnimation(Progress, index, TimeSpan.FromMilliseconds(1600))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
         };
-        anim.Completed += (_, _) => { if (id == _animId) _animating = false; };
-        BeginAnimation(ScrollPositionProperty, anim);
+        BeginAnimation(ProgressProperty, move);
+
+        bool toFuture = index == _count;
+        bool fromFuture = old == _count;
+
+        if (toFuture)
+        {
+            // финал: карточка и год гаснут, появляется «Всё ещё впереди!»
+            Card.HideOut();
+            _reel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(400)));
+            ShowFuture(true);
+            return;
+        }
+
+        var p = _data.Periods[index];
+
+        if (fromFuture)
+        {
+            ShowFuture(false);
+            Card.SetInstant(p);
+            Card.ShowIn(250);
+            _reel.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(500)) { BeginTime = TimeSpan.FromMilliseconds(250) });
+        }
+        else
+        {
+            Card.SwapTo(p);                                  // 2) текст меняется
+        }
+
+        _reel.RollTo(p.Year, index > old);                   // 3) цифры крутятся
     }
 
-    private void Scroller_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    private void ShowFuture(bool show)
+    {
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var shift = (TranslateTransform)_futureText.RenderTransform;
+        _futureText.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(show ? 1 : 0, TimeSpan.FromMilliseconds(show ? 900 : 300))
+            { BeginTime = TimeSpan.FromMilliseconds(show ? 300 : 0), EasingFunction = ease });
+        shift.BeginAnimation(TranslateTransform.XProperty,
+            new DoubleAnimation(show ? 0 : 80, TimeSpan.FromMilliseconds(show ? 1000 : 300))
+            { BeginTime = TimeSpan.FromMilliseconds(show ? 300 : 0), EasingFunction = ease });
+    }
+
+    private void SetFooterLabel(int index)
+    {
+        FooterLabel.Text = _footerLabels[index];
+        FooterLabel.BeginAnimation(OpacityProperty, new DoubleAnimation(0.2, 1, TimeSpan.FromMilliseconds(300)));
+    }
+
+    // =====================================================================
+    //  Управление: колесо, стрелки, свайп мышью/пальцем
+    // =====================================================================
+    private DateTime _lastWheel = DateTime.MinValue;
+    private double _wheelAcc;
+
+    private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         e.Handled = true;
-        if (!_animating) _targetOffset = Scroller.HorizontalOffset;
-        double target = Math.Clamp(_targetOffset - e.Delta * 2.0, 0, MaxOffset);
-        AnimateScroll(target, 500);
+        _wheelAcc += e.Delta;
+        if (Math.Abs(_wheelAcc) < 120) return;
+
+        if ((DateTime.Now - _lastWheel).TotalMilliseconds >= 600)
+        {
+            _lastWheel = DateTime.Now;
+            NavigateTo(_index + (_wheelAcc < 0 ? 1 : -1));
+        }
+        _wheelAcc = 0;
     }
 
-    private void Scroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    private Point _dragStart;
+
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        => _dragStart = e.GetPosition(this);
+
+    private void Window_PreviewMouseUp(object sender, MouseButtonEventArgs e)
     {
-        if (!_animating) _targetOffset = Scroller.HorizontalOffset;
-        UpdateState();
+        var d = e.GetPosition(this) - _dragStart;
+        if (Math.Abs(d.X) > 150 && Math.Abs(d.X) > Math.Abs(d.Y) * 2)
+            NavigateTo(_index + (d.X < 0 ? 1 : -1));
     }
 
-    /// <summary>Подсвечивает текущий кружок, меняет подпись футера, запускает анимации появления</summary>
-    private void UpdateState()
-    {
-        if (_dots.Count == 0) return;
-        double offset = Scroller.HorizontalOffset;
-
-        // появление эпох, которые вошли в экран
-        for (int i = 0; i < _sections.Count; i++)
-        {
-            if (!_sections[i].Revealed && i * SectionWidth + 140 < offset + StageWidth - 120)
-                _sections[i].Reveal();
-        }
-        if (!_futureRevealed && _futurePanel != null &&
-            _sections.Count * SectionWidth + 120 < offset + StageWidth - 120)
-        {
-            _futureRevealed = true;
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            _futurePanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900)) { EasingFunction = ease });
-            ((TranslateTransform)_futurePanel.RenderTransform)
-                .BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(120, 0, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
-        }
-
-        // текущая эпоха
-        int idx = Math.Clamp((int)Math.Round(offset / SectionWidth), 0, _dots.Count - 1);
-        if (idx != _current)
-        {
-            _current = idx;
-            _dots[idx].IsChecked = true;
-            FooterLabel.Text = _footerLabels[idx];
-            FooterLabel.BeginAnimation(OpacityProperty, new DoubleAnimation(0.2, 1, TimeSpan.FromMilliseconds(300)));
-        }
-    }
-
-    // =====================================================================
-    //  Клавиатура
-    // =====================================================================
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
         switch (e.Key)
         {
             case Key.Escape: Close(); break;
             case Key.Right:
-            case Key.PageDown: NavigateTo(_current + 1); break;
+            case Key.PageDown: NavigateTo(_index + 1); break;
             case Key.Left:
-            case Key.PageUp: NavigateTo(_current - 1); break;
+            case Key.PageUp: NavigateTo(_index - 1); break;
             case Key.Home: NavigateTo(0); break;
-            case Key.End: NavigateTo(_dots.Count - 1); break;
+            case Key.End: NavigateTo(_n - 1); break;
         }
     }
 
     // =====================================================================
-    //  Кнопка «Читать подробнее» - пока заглушка
+    //  Всплывающее сообщение для кнопки-заглушки
     // =====================================================================
-    private void OnDetailsRequested(TimelineSection section)
-    {
-        ShowToast($"«Читать подробнее» — {section.Period.Year}: страница в разработке");
-    }
-
     private void ShowToast(string text)
     {
         ToastText.Text = text;

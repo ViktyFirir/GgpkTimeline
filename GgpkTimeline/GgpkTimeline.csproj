@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- старые файлы: не компилируются -->
+    <Compile Remove="_legacy\**" />
+    <Page Remove="_legacy\**" />
+    <None Remove="_legacy\**" />
     <None Remove="Assets\**" />
     <None Remove="Fonts\**\*.ttf" />
     <None Remove="Fonts\**\*.otf" />
