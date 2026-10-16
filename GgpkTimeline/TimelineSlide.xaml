@@ -1,0 +1,61 @@
+<UserControl x:Class="GgpkTimeline.TimelineSlide"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="1920" Height="1080">
+    <Grid Background="#0B1A4A">
+
+        <!-- Фон (PreMain.png) -->
+        <Image x:Name="Bg" Stretch="UniformToFill"/>
+
+        <!-- Большой год -->
+        <TextBlock x:Name="YearText" FontFamily="{StaticResource MontserratBlack}" FontSize="330"
+                   Foreground="#FFF8EE" HorizontalAlignment="Left" VerticalAlignment="Top"
+                   Margin="810,290,0,0"/>
+
+        <!-- Фото-заглушка (показывается, только если файл есть в Images) -->
+        <Border x:Name="Photo" Width="440" Height="260" CornerRadius="20"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,90,150"
+                Visibility="Collapsed" BorderBrush="#66FFFFFF" BorderThickness="2"/>
+
+        <!-- Стеклянная карточка -->
+        <Border x:Name="Card" Width="664" Height="614" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Margin="118,149,0,0" CornerRadius="28" Background="#D9061949" BorderThickness="2"
+                Padding="42,38,42,40">
+            <Border.BorderBrush>
+                <SolidColorBrush x:Name="CardBorder" Color="#7A9FBFE6"/>
+            </Border.BorderBrush>
+            <Border.Triggers>
+                <EventTrigger RoutedEvent="MouseEnter">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetName="CardBorder" Storyboard.TargetProperty="Color"
+                                            To="#FFEB6B3C" Duration="0:0:0.25"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="MouseLeave">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetName="CardBorder" Storyboard.TargetProperty="Color"
+                                            To="#7A9FBFE6" Duration="0:0:0.25"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Border.Triggers>
+
+            <DockPanel LastChildFill="True">
+                <Button x:Name="MoreBtn" DockPanel.Dock="Bottom" Content="Читать подробнее"
+                        Style="{StaticResource OrangeButton}" HorizontalAlignment="Left"
+                        Click="MoreBtn_Click"/>
+                <StackPanel>
+                    <TextBlock x:Name="TitleText" FontFamily="{StaticResource Montserrat}" FontSize="46"
+                               FontWeight="SemiBold" Foreground="#D6ECFF" TextWrapping="Wrap"
+                               LineHeight="54" LineStackingStrategy="BlockLineHeight"/>
+                    <TextBlock x:Name="BodyText" FontFamily="{StaticResource Montserrat}" FontSize="26"
+                               Foreground="White" TextWrapping="Wrap" Margin="0,20,0,0"
+                               LineHeight="33" LineStackingStrategy="BlockLineHeight"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>
