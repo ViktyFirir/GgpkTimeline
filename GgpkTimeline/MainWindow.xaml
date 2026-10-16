@@ -1,4 +1,5 @@
 <Window x:Class="GgpkTimeline.MainWindow"
+        xmlns:controls="clr-namespace:GgpkTimeline.Controls"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ctl="clr-namespace:GgpkTimeline.Controls"
@@ -45,7 +46,7 @@
                        Width="290" Height="181"
                        HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,30,0,0"
                        RenderOptions.BitmapScalingMode="HighQuality"
-                       Opacity="0" IsHitTestVisible="False">
+                       Opacity="0" Cursor="Hand" MouseLeftButtonDown="Logo_MouseLeftButtonDown">
                     <Image.RenderTransform>
                         <TranslateTransform x:Name="LogoShift" Y="-40"/>
                     </Image.RenderTransform>
@@ -89,5 +90,6 @@
                 Opacity="0" IsHitTestVisible="False">
             <TextBlock x:Name="ToastText" Foreground="White" FontSize="20" FontWeight="Medium"/>
         </Border>
+        <controls:About x:Name="AboutPage" Visibility="Collapsed"/>
     </Grid>
 </Window>
