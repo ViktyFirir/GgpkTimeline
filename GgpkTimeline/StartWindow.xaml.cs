@@ -12,6 +12,7 @@ namespace GgpkTimeline
         {
             InitializeComponent();
             Loaded += StartWindow_Loaded;
+            AboutPage.CloseRequested += CloseAbout;   // крестик на странице «О проекте»
         }
 
         // ===== Анимация появления (по очереди) =====
@@ -51,17 +52,48 @@ namespace GgpkTimeline
             Close();
         }
 
-        // ===== «О проекте» — заглушка =====
-        private void AboutButton_Click(object sender, RoutedEventArgs e)
+        // ===== «О проекте» — открыть страницу About поверх стартового экрана =====
+        private bool _aboutOpen;
+
+        private void AboutButton_Click(object sender, RoutedEventArgs e) => OpenAbout();
+
+        private void OpenAbout()
         {
-            // TODO: открыть экран «О проекте»
-            MessageBox.Show("Раздел «О проекте» пока в разработке", "Политех через года");
+            if (_aboutOpen) return;
+            _aboutOpen = true;
+            AboutPage.Visibility = Visibility.Visible;
+            AboutPage.BeginAnimation(UIElement.OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300)));
+            AboutPage.Play();
         }
 
-        // ===== F11 — полный экран, Esc — выйти из полного экрана =====
+        // Возврат на главный (стартовый) экран
+        private void CloseAbout()
+        {
+            if (!_aboutOpen) return;
+            _aboutOpen = false;
+            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250));
+            fade.Completed += (_, _) =>
+            {
+                if (!_aboutOpen) AboutPage.Visibility = Visibility.Collapsed;
+            };
+            AboutPage.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+
+        // ===== Esc — вернуться с «О проекте» (или выйти), F11 — окно / полный экран =====
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.F11)
+            if (_aboutOpen)
+            {
+                if (e.Key == Key.Escape) CloseAbout();
+                return;
+            }
+
+            if (e.Key == Key.Escape)
+            {
+                Close();
+            }
+            else if (e.Key == Key.F11)
             {
                 if (WindowStyle == WindowStyle.None)
                 {
@@ -73,11 +105,6 @@ namespace GgpkTimeline
                     WindowStyle = WindowStyle.None;
                     WindowState = WindowState.Maximized;
                 }
-            }
-            else if (e.Key == Key.Escape && WindowStyle == WindowStyle.None)
-            {
-                WindowStyle = WindowStyle.SingleBorderWindow;
-                WindowState = WindowState.Normal;
             }
         }
     }

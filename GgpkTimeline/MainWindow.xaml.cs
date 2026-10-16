@@ -47,7 +47,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        AboutPage.CloseRequested += CloseAbout;
     }
 
     // =====================================================================
@@ -386,15 +385,8 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
-        if (_aboutOpen)
-        {
-            if (e.Key == Key.Escape) CloseAbout();
-            return;
-        }
-
         switch (e.Key)
         {
-            case Key.F1: OpenAbout(); break;
             case Key.Escape: Close(); break;
             case Key.Right:
             case Key.PageDown: NavigateTo(_index + 1); break;
@@ -404,27 +396,20 @@ public partial class MainWindow : Window
             case Key.End: NavigateTo(_n - 1); break;
         }
     }
-    private bool _aboutOpen;
 
-    private void Logo_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => OpenAbout();
+    // =====================================================================
+    //  Клик по логотипу - возврат на главный (стартовый) экран
+    // =====================================================================
+    private void Logo_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => GoHome();
 
-    private void OpenAbout()
+    private void GoHome()
     {
-        if (_aboutOpen) return;
-        _aboutOpen = true;
-        AboutPage.Visibility = Visibility.Visible;
-        AboutPage.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300)));
-        AboutPage.Play();
+        var start = new StartWindow();
+        Application.Current.MainWindow = start;
+        start.Show();
+        Close();
     }
 
-    private void CloseAbout()
-    {
-        if (!_aboutOpen) return;
-        _aboutOpen = false;
-        var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250));
-        fade.Completed += (_, _) => { if (!_aboutOpen) AboutPage.Visibility = Visibility.Collapsed; };
-        AboutPage.BeginAnimation(OpacityProperty, fade);
-    }
     // =====================================================================
     //  Всплывающее сообщение для кнопки-заглушки
     // =====================================================================

@@ -1,10 +1,9 @@
 ﻿<Window x:Class="GgpkTimeline.StartWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:GgpkTimeline.Controls"
         Title="Политех через года"
-        Width="1280" Height="720"
-        MinWidth="640" MinHeight="360"
-        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized" WindowStyle="None" ResizeMode="NoResize"
         Background="#061949"
         UseLayoutRounding="True"
         KeyDown="Window_KeyDown">
@@ -112,23 +111,24 @@
         </Style>
     </Window.Resources>
 
-    <Viewbox Stretch="Uniform">
-        <Canvas Width="1920" Height="1080" ClipToBounds="True">
+    <Grid>
+        <Viewbox Stretch="Uniform">
+            <Canvas Width="1920" Height="1080" ClipToBounds="True">
 
-            <!-- Фон (рамка уже нарисована на картинке) -->
-            <Image Source="Assets/Start/PreMain.png"
+                <!-- Фон (рамка уже нарисована на картинке) -->
+                <Image Source="Assets/Start/PreMain.png"
                    Width="1920" Height="1080" Stretch="Fill"
                    RenderOptions.BitmapScalingMode="HighQuality"/>
 
-            <!-- Логотип на верхней линии рамки -->
-            <Grid x:Name="LogoHost" Canvas.Left="860" Canvas.Top="42" Width="200" Height="153">
-                <Image Source="Assets/Start/LOGO.png" Stretch="Uniform"
+                <!-- Логотип на верхней линии рамки -->
+                <Grid x:Name="LogoHost" Canvas.Left="860" Canvas.Top="42" Width="200" Height="153">
+                    <Image Source="Assets/Start/LOGO.png" Stretch="Uniform"
                        Style="{StaticResource LogoStyle}"
                        RenderOptions.BitmapScalingMode="HighQuality"/>
-            </Grid>
+                </Grid>
 
-            <!-- Подзаголовок -->
-            <TextBlock x:Name="Subtitle"
+                <!-- Подзаголовок -->
+                <TextBlock x:Name="Subtitle"
                        Canvas.Left="0" Canvas.Top="247" Width="1920"
                        TextAlignment="Center"
                        FontFamily="{StaticResource MontSemiBold}"
@@ -136,10 +136,10 @@
                        LineStackingStrategy="BlockLineHeight" LineHeight="56"
                        Foreground="{StaticResource SubtitleBrush}">
                 Судьба малой родины в<LineBreak/>объективе технологий
-            </TextBlock>
+                </TextBlock>
 
-            <!-- Заголовок -->
-            <TextBlock x:Name="TitleText"
+                <!-- Заголовок -->
+                <TextBlock x:Name="TitleText"
                        Canvas.Left="0" Canvas.Top="400" Width="1920"
                        TextAlignment="Center"
                        FontFamily="{StaticResource MontExtraBold}"
@@ -147,22 +147,26 @@
                        LineStackingStrategy="BlockLineHeight" LineHeight="160"
                        Foreground="White">
                 Политех через<LineBreak/>года
-            </TextBlock>
+                </TextBlock>
 
-            <!-- Кнопки -->
-            <Button x:Name="StartButton"
+                <!-- Кнопки -->
+                <Button x:Name="StartButton"
                     Canvas.Left="549" Canvas.Top="775" Width="399" Height="101"
                     Content="Начать"
                     Background="{StaticResource OrangeBrush}"
                     Style="{StaticResource PillButton}"
                     Click="StartButton_Click"/>
 
-            <Button x:Name="AboutButton"
+                <Button x:Name="AboutButton"
                     Canvas.Left="971" Canvas.Top="775" Width="399" Height="101"
                     Content="О проекте"
                     Background="{StaticResource BlueBrush}"
                     Style="{StaticResource PillButton}"
                     Click="AboutButton_Click"/>
-        </Canvas>
-    </Viewbox>
+            </Canvas>
+        </Viewbox>
+
+        <!-- Страница «О проекте» поверх стартового экрана (открывается кнопкой «О проекте») -->
+        <controls:About x:Name="AboutPage" Visibility="Collapsed"/>
+    </Grid>
 </Window>
