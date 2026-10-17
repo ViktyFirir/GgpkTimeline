@@ -47,6 +47,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        DetailsPageView.CloseRequested += CloseDetails;   // крестик на странице «Подробнее»
     }
 
     // =====================================================================
@@ -63,7 +64,7 @@ public partial class MainWindow : Window
         BuildYear();
         BuildFooter();
 
-        Card.DetailsRequested += p => ShowToast($"«Читать подробнее» — {p.Year}: страница в разработке");
+        Card.DetailsRequested += OpenDetails;
 
         PlayIntro();
     }
@@ -359,6 +360,7 @@ public partial class MainWindow : Window
 
     private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        if (DetailsOpen) return;   // на странице «Подробнее» колесо прокручивает её текст
         e.Handled = true;
         _wheelAcc += e.Delta;
         if (Math.Abs(_wheelAcc) < 120) return;
@@ -378,6 +380,7 @@ public partial class MainWindow : Window
 
     private void Window_PreviewMouseUp(object sender, MouseButtonEventArgs e)
     {
+        if (DetailsOpen) return;
         var d = e.GetPosition(this) - _dragStart;
         if (Math.Abs(d.X) > 150 && Math.Abs(d.X) > Math.Abs(d.Y) * 2)
             NavigateTo(_index + (d.X < 0 ? 1 : -1));
@@ -385,6 +388,13 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
+        // пока открыта страница «Подробнее», Esc закрывает только её
+        if (DetailsOpen)
+        {
+            if (e.Key == Key.Escape) CloseDetails();
+            return;
+        }
+
         switch (e.Key)
         {
             case Key.Escape: Close(); break;
@@ -411,7 +421,37 @@ public partial class MainWindow : Window
     }
 
     // =====================================================================
-    //  Всплывающее сообщение для кнопки-заглушки
+    //  Кнопка «Читать подробнее» - страница с подробностями периода
+    // =====================================================================
+    private int _detailsToken;   // защита от гонки: закрыли и сразу открыли снова
+
+    private bool DetailsOpen => DetailsPageView.Visibility == Visibility.Visible;
+
+    private void OpenDetails(Period period)
+    {
+        _detailsToken++;
+        DetailsPageView.SetPeriod(period);   // тексты и фото выбранного периода из timeline.json
+
+        DetailsPageView.Visibility = Visibility.Visible;
+        DetailsPageView.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(250)));
+        DetailsPageView.Play();
+    }
+
+    private void CloseDetails()
+    {
+        if (!DetailsOpen) return;
+
+        int token = ++_detailsToken;
+        var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250));
+        fade.Completed += (_, _) =>
+        {
+            if (token == _detailsToken) DetailsPageView.Visibility = Visibility.Collapsed;
+        };
+        DetailsPageView.BeginAnimation(OpacityProperty, fade);
+    }
+
+    // =====================================================================
+    //  Всплывающее сообщение (оставлено на будущее)
     // =====================================================================
     private void ShowToast(string text)
     {
