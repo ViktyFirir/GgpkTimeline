@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
@@ -21,13 +22,15 @@ namespace GgpkTimeline.Controls
         private static readonly Brush SoftText = Frozen(Color.FromRgb(0xC9, 0xD3, 0xEE));
         private static readonly Brush DarkText = Frozen(Color.FromRgb(0x0B, 0x1A, 0x4A));
 
-        private readonly List<Border> _cards = new();   // бежевые блоки с текстом
-        private readonly List<Border> _ovals = new();   // овалы с фото
+        private readonly List<Border> _photos = new();  // две фотографии периода (images[0], images[1])
+        private readonly List<Border> _ovals = new();   // овал с портретом (images[2])
+        private readonly List<double> _photoRatios = new();   // пропорции (ширина / высота) двух фотографий
+        private const double MaxPhotoHeight = 450;       // максимальная высота ряда с фотографиями
 
         public DetailsPage()
         {
             InitializeComponent();
-            LoadHeaderBackground();
+            PhotosGrid.SizeChanged += (_, _) => FitPhotos();
         }
 
         private static Brush Frozen(Color c)
@@ -37,18 +40,6 @@ namespace GgpkTimeline.Controls
             return b;
         }
 
-        /// <summary>Фон шапки. Нет файла Assets/DetailFon.png - страница просто открывается без него.</summary>
-        private void LoadHeaderBackground()
-        {
-            try
-            {
-                HeaderBg.Source = new BitmapImage(new Uri("pack://application:,,,/Assets/DetailFon.png", UriKind.Absolute));
-            }
-            catch
-            {
-                HeaderBg.Visibility = Visibility.Collapsed;
-            }
-        }
 
         // =====================================================================
         //  Данные: один период из Data/timeline.json
@@ -61,44 +52,109 @@ namespace GgpkTimeline.Controls
             IntroText.Text = period.Text;
             IntroText.Visibility = string.IsNullOrWhiteSpace(period.Text) ? Visibility.Collapsed : Visibility.Visible;
 
-            BuildDetails(period.Details);
-            BuildImages(period.Images);
+            var images = period.Images ?? new List<PeriodImage>();
+            var photos = images.Take(2).ToList();      // images[0], images[1] - две фотографии в ряд
+            var portraits = images.Skip(2).ToList();   // images[2] - портрет с заголовком и описанием
+
+            Lightbox.Visibility = Visibility.Collapsed;   // закрыть просмотр, если был открыт
+            Lightbox.Opacity = 0;
+
+            BuildPhotos(photos);
+            BuildDetails(period.Details, portraits);
+            BuildPortraits(portraits);
 
             DetailsScroller.ScrollToTop();
         }
 
-        /// <summary>Первые два абзаца details - в бежевые блоки, остальные - обычным текстом ниже.</summary>
-        private void BuildDetails(List<string> details)
+        /// <summary>Две фотографии периода (images[0] и images[1]) - в один ряд, на месте бывших бежевых блоков.</summary>
+        private void BuildPhotos(List<PeriodImage> photos)
         {
-            CardsGrid.Children.Clear();
-            CardsGrid.ColumnDefinitions.Clear();
-            ExtraPanel.Children.Clear();
-            _cards.Clear();
+            PhotosGrid.Children.Clear();
+            PhotosGrid.ColumnDefinitions.Clear();
+            _photos.Clear();
+            _photoRatios.Clear();
 
-            var items = details.Where(d => !string.IsNullOrWhiteSpace(d)).ToList();
-
-            int cardCount = Math.Min(2, items.Count);
-            for (int i = 0; i < cardCount; i++)
+            for (int i = 0; i < photos.Count; i++)
             {
-                CardsGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                var photo = CreatePhoto(photos[i].File, out double ratio);
+                _photoRatios.Add(ratio);
 
-                var card = CreateCard(items[i]);
-                card.Margin = cardCount == 2
+                if (photo.Tag is ImageSource photoSource)
+                {
+                    photo.Cursor = Cursors.Hand;
+                    photo.MouseLeftButtonUp += (_, _) => OpenLightbox(photoSource);
+                }
+
+                // ширина колонки пропорциональна пропорциям фото - фотографии одной высоты, без обрезки
+                PhotosGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ratio, GridUnitType.Star) });
+
+                photo.Margin = photos.Count == 2
                     ? (i == 0 ? new Thickness(0, 0, 25, 0) : new Thickness(25, 0, 0, 0))
                     : new Thickness(0);
-                Grid.SetColumn(card, i);
-                CardsGrid.Children.Add(card);
-                _cards.Add(card);
+                Grid.SetColumn(photo, i);
+                PhotosGrid.Children.Add(photo);
+                _photos.Add(photo);
             }
-            CardsGrid.Visibility = cardCount == 0 ? Visibility.Collapsed : Visibility.Visible;
-
-            for (int i = 2; i < items.Count; i++)
-                ExtraPanel.Children.Add(CreateParagraph(items[i], 18));
-            ExtraPanel.Visibility = items.Count > 2 ? Visibility.Visible : Visibility.Collapsed;
+            PhotosGrid.Visibility = photos.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            FitPhotos();
         }
 
-        /// <summary>Каждая картинка из images: овал с фото слева, заголовок и описание справа.</summary>
-        private void BuildImages(List<PeriodImage> images)
+        /// <summary>Подгоняет размер рамок под пропорции картинок: общая высота, ширина по пропорции - ничего не обрезается.</summary>
+        private void FitPhotos()
+        {
+            if (_photos.Count == 0 || PhotosGrid.ActualWidth <= 0) return;
+
+            double gap = _photos.Count == 2 ? 50 : 0;   // 25 + 25 между фотографиями
+            double height = Math.Min(MaxPhotoHeight, (PhotosGrid.ActualWidth - gap) / _photoRatios.Sum());
+
+            for (int i = 0; i < _photos.Count; i++)
+            {
+                _photos[i].Height = height;
+                _photos[i].Width = height * _photoRatios[i];
+            }
+        }
+
+        /// <summary>
+        /// Абзацы из details - обычным текстом под фотографиями.
+        /// Абзац, который повторяет заголовок/описание портрета, пропускается (он уже выводится рядом с портретом).
+        /// </summary>
+        private void BuildDetails(List<string> details, List<PeriodImage> portraits)
+        {
+            ExtraPanel.Children.Clear();
+
+            var items = (details ?? new List<string>())
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .Where(d => !DuplicatesPortrait(d, portraits))
+                .ToList();
+
+            foreach (var item in items)
+                ExtraPanel.Children.Add(CreateParagraph(item, 18));
+            ExtraPanel.Visibility = items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <summary>true, если абзац - это "Заголовок - описание" портрета, уже показанный рядом с ним.</summary>
+        private static bool DuplicatesPortrait(string paragraph, List<PeriodImage> portraits)
+        {
+            var p = paragraph.Trim();
+            foreach (var img in portraits)
+            {
+                var title = img.Title?.Trim();
+                if (!string.IsNullOrEmpty(title) && p.StartsWith(title, StringComparison.Ordinal))
+                    return true;
+
+                var desc = img.Description?.Trim();
+                if (!string.IsNullOrEmpty(desc))
+                {
+                    var head = desc.Length > 40 ? desc.Substring(0, 40) : desc;
+                    if (p.Contains(head, StringComparison.Ordinal))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>Портрет (images[2]): овал с фото слева, заголовок и описание справа.</summary>
+        private void BuildPortraits(List<PeriodImage> images)
         {
             ImagesPanel.Children.Clear();
             _ovals.Clear();
@@ -125,7 +181,11 @@ namespace GgpkTimeline.Controls
                 // нет файла - остаётся бежевая заглушка
                 var source = LoadImage(img.File);
                 if (source != null)
+                {
                     oval.Background = new ImageBrush(source) { Stretch = Stretch.UniformToFill };
+                    oval.Cursor = Cursors.Hand;
+                    oval.MouseLeftButtonUp += (_, _) => OpenLightbox(source);
+                }
 
                 Grid.SetColumn(oval, 0);
                 row.Children.Add(oval);
@@ -168,33 +228,33 @@ namespace GgpkTimeline.Controls
             Margin = new Thickness(0, 0, 0, bottom)
         };
 
-        private static Border CreateCard(string text)
+        private static Border CreatePhoto(string file, out double ratio)
         {
-            var card = new Border
+            var photo = new Border
             {
-                Background = new SolidColorBrush(BeigeColor),
+                Background = new SolidColorBrush(BeigeColor),   // нет файла - бежевая заглушка
                 CornerRadius = new CornerRadius(16),
                 BorderThickness = new Thickness(1),
                 BorderBrush = new SolidColorBrush(BeigeBorder),
-                Padding = new Thickness(32, 28, 32, 32),
-                MinHeight = 260,
+                HorizontalAlignment = HorizontalAlignment.Center,
                 RenderTransformOrigin = new Point(0.5, 0.5),
                 RenderTransform = new ScaleTransform(1, 1),
-                Opacity = 0,
-                Child = new TextBlock
-                {
-                    Text = text,
-                    FontSize = 20,
-                    LineHeight = 30,
-                    Foreground = DarkText,
-                    TextWrapping = TextWrapping.Wrap
-                }
+                Opacity = 0
             };
 
-            // Наведение: блок чуть увеличивается, рамка становится оранжевой
-            card.MouseEnter += (_, _) => Hover(card, 1.02, OrangeColor, 200);
-            card.MouseLeave += (_, _) => Hover(card, 1.0, BeigeBorder, 250);
-            return card;
+            ratio = 1.5;   // для заглушки, если файла нет
+            var source = LoadImage(file);
+            if (source != null)
+            {
+                if (source.Height > 0) ratio = source.Width / source.Height;
+                photo.Background = new ImageBrush(source) { Stretch = Stretch.Fill };   // рамка уже по пропорции картинки
+                photo.Tag = source;   // для просмотра на весь экран
+            }
+
+            // Наведение: фото чуть увеличивается, рамка становится оранжевой
+            photo.MouseEnter += (_, _) => Hover(photo, 1.02, OrangeColor, 200);
+            photo.MouseLeave += (_, _) => Hover(photo, 1.0, BeigeBorder, 250);
+            return photo;
         }
 
         private static void Hover(Border b, double scale, Color border, int ms)
@@ -208,7 +268,7 @@ namespace GgpkTimeline.Controls
                 new ColorAnimation(border, TimeSpan.FromMilliseconds(ms)));
         }
 
-        /// <summary>Файл лежит относительно папки с exe, например Images/Years/1956.png. Нет файла - null.</summary>
+        /// <summary>Файл лежит относительно папки с exe, например Assets/Years/1956_1.png. Нет файла - null.</summary>
         private static ImageSource? LoadImage(string relativePath)
         {
             if (string.IsNullOrWhiteSpace(relativePath)) return null;
@@ -251,14 +311,14 @@ namespace GgpkTimeline.Controls
             Fade(BodyPanel, 800, 300, easeOut);
             Slide(BodyShift, 40, 800, 300, easeOut);
 
-            // 4. Бежевые блоки
-            for (int i = 0; i < _cards.Count; i++)
+            // 4. Две фотографии периода
+            for (int i = 0; i < _photos.Count; i++)
             {
-                Fade(_cards[i], 600, 500 + i * 100, easeOut);
-                Pop(_cards[i], 0.9, 600, 500 + i * 100, easeOut);
+                Fade(_photos[i], 600, 500 + i * 100, easeOut);
+                Pop(_photos[i], 0.9, 600, 500 + i * 100, easeOut);
             }
 
-            // 5. Овалы с фото
+            // 5. Овал с портретом
             for (int i = 0; i < _ovals.Count; i++)
             {
                 Fade(_ovals[i], 700, 700 + i * 150, easeOut);
@@ -295,6 +355,48 @@ namespace GgpkTimeline.Controls
             { BeginTime = TimeSpan.FromMilliseconds(delay), EasingFunction = ease };
             st.BeginAnimation(ScaleTransform.ScaleXProperty, a);
             st.BeginAnimation(ScaleTransform.ScaleYProperty, a);
+        }
+
+        // =====================================================================
+        //  Просмотр картинки на весь экран
+        // =====================================================================
+        private void OpenLightbox(ImageSource source)
+        {
+            LightboxImage.Source = source;
+            Lightbox.Visibility = Visibility.Visible;
+            Lightbox.Focus();   // чтобы работал Esc
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            Lightbox.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
+            var zoom = new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease };
+            LightboxScale.BeginAnimation(ScaleTransform.ScaleXProperty, zoom);
+            LightboxScale.BeginAnimation(ScaleTransform.ScaleYProperty, zoom);
+        }
+
+        private void CloseLightbox()
+        {
+            if (Lightbox.Visibility != Visibility.Visible) return;
+
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(180));
+            fade.Completed += (_, _) =>
+            {
+                Lightbox.Visibility = Visibility.Collapsed;
+                LightboxImage.Source = null;
+            };
+            Lightbox.BeginAnimation(OpacityProperty, fade);
+        }
+
+        private void Lightbox_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => CloseLightbox();
+
+        private void LightboxClose_Click(object sender, RoutedEventArgs e) => CloseLightbox();
+
+        private void Lightbox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                CloseLightbox();
+                e.Handled = true;
+            }
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)

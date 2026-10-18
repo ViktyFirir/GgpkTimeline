@@ -26,7 +26,9 @@
 
                 <!-- Фон шапки: Assets/DetailFon.png. Подключается в коде (DetailsPage.xaml.cs),
                      поэтому если файла нет - страница всё равно открывается, просто без картинки -->
+
                 <Image x:Name="HeaderBg"
+                       Source="pack://application:,,,/Assets/DetailFon.png"
                        Stretch="UniformToFill"
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Top"
@@ -70,13 +72,13 @@
                                    FontSize="22" Foreground="#C9D3EE" TextWrapping="Wrap"
                                    LineHeight="32" Margin="0,0,0,50"/>
 
-                        <!-- Бежевые блоки: первые два абзаца из details (создаются в коде) -->
-                        <Grid x:Name="CardsGrid" Margin="0,0,0,50"/>
+                        <!-- Две фотографии периода (images[0] и images[1]) в один ряд (создаются в коде) -->
+                        <Grid x:Name="PhotosGrid" Margin="0,0,0,50"/>
 
-                        <!-- Остальные абзацы из details (если их больше двух) -->
+                        <!-- Второй абзац (details[0]) и остальные абзацы, которые не повторяют подпись к портрету -->
                         <StackPanel x:Name="ExtraPanel" Margin="0,0,0,40"/>
 
-                        <!-- Фото периода: овал + заголовок + описание, по одной строке на каждую картинку из images -->
+                        <!-- Портрет (images[2]): овал слева, заголовок и описание справа -->
                         <StackPanel x:Name="ImagesPanel"/>
                     </StackPanel>
                 </StackPanel>
@@ -91,5 +93,29 @@
                 Margin="0,20,24,0"
                 Opacity="0" Click="CloseButton_Click"
                 Panel.ZIndex="10"/>
+
+        <!-- Просмотр картинки на весь экран: открывается по клику на фото, закрывается по клику, Esc или кнопке -->
+        <Grid x:Name="Lightbox"
+              Visibility="Collapsed" Opacity="0"
+              Background="#F2050C26"
+              Focusable="True"
+              Panel.ZIndex="20"
+              MouseLeftButtonDown="Lightbox_MouseLeftButtonDown"
+              KeyDown="Lightbox_KeyDown">
+            <Image x:Name="LightboxImage"
+                   Stretch="Uniform"
+                   Margin="80,70"
+                   RenderOptions.BitmapScalingMode="HighQuality"
+                   RenderTransformOrigin="0.5,0.5">
+                <Image.RenderTransform>
+                    <ScaleTransform x:Name="LightboxScale" ScaleX="0.95" ScaleY="0.95"/>
+                </Image.RenderTransform>
+            </Image>
+            <Button Content="✕"
+                    Style="{StaticResource CloseButtonStyle}"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,20,24,0"
+                    Click="LightboxClose_Click"/>
+        </Grid>
     </Grid>
 </UserControl>
