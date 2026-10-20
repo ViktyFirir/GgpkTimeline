@@ -67,18 +67,11 @@
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,15"/>
 
-                        <!-- Вступительный текст (text) -->
-                        <TextBlock x:Name="IntroText"
-                                   FontSize="22" Foreground="#C9D3EE" TextWrapping="Wrap"
-                                   LineHeight="32" Margin="0,0,0,50"/>
+                        <!-- Основная часть: абзацы (text, details) чередуются с рядами по две фотографии.
+                             Если фотографий нечётное число - последняя стоит по центру (создаётся в коде) -->
+                        <StackPanel x:Name="ContentPanel" Margin="0,0,0,20"/>
 
-                        <!-- Две фотографии периода (images[0] и images[1]) в один ряд (создаются в коде) -->
-                        <Grid x:Name="PhotosGrid" Margin="0,0,0,50"/>
-
-                        <!-- Второй абзац (details[0]) и остальные абзацы, которые не повторяют подпись к портрету -->
-                        <StackPanel x:Name="ExtraPanel" Margin="0,0,0,40"/>
-
-                        <!-- Портрет (images[2]): овал слева, заголовок и описание справа -->
+                        <!-- Портрет руководителя: овал слева, заголовок и описание справа -->
                         <StackPanel x:Name="ImagesPanel"/>
                     </StackPanel>
                 </StackPanel>
@@ -102,20 +95,44 @@
               Panel.ZIndex="20"
               MouseLeftButtonDown="Lightbox_MouseLeftButtonDown"
               KeyDown="Lightbox_KeyDown">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Картинка на всё доступное место -->
             <Image x:Name="LightboxImage"
+                   Grid.Row="0"
                    Stretch="Uniform"
-                   Margin="80,70"
+                   Margin="80,60,80,20"
                    RenderOptions.BitmapScalingMode="HighQuality"
                    RenderTransformOrigin="0.5,0.5">
                 <Image.RenderTransform>
                     <ScaleTransform x:Name="LightboxScale" ScaleX="0.95" ScaleY="0.95"/>
                 </Image.RenderTransform>
             </Image>
+
+            <!-- Заголовок и подпись под картинкой -->
+            <StackPanel x:Name="LightboxCaption"
+                        Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        MaxWidth="1100"
+                        Margin="80,0,80,45">
+                <TextBlock x:Name="LightboxTitle"
+                           FontSize="30" FontWeight="SemiBold" Foreground="#FFFFFF"
+                           TextWrapping="Wrap" TextAlignment="Center"
+                           Margin="0,0,0,10"/>
+                <TextBlock x:Name="LightboxDescription"
+                           FontSize="20" LineHeight="30" Foreground="#C9D3EE"
+                           TextWrapping="Wrap" TextAlignment="Center"/>
+            </StackPanel>
+
             <Button Content="✕"
                     Style="{StaticResource CloseButtonStyle}"
                     HorizontalAlignment="Right" VerticalAlignment="Top"
                     Margin="0,20,24,0"
-                    Click="LightboxClose_Click"/>
+                    Click="LightboxClose_Click"
+                    Grid.RowSpan="2"/>
         </Grid>
     </Grid>
 </UserControl>

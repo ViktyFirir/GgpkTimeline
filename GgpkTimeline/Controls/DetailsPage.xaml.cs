@@ -22,15 +22,29 @@ namespace GgpkTimeline.Controls
         private static readonly Brush SoftText = Frozen(Color.FromRgb(0xC9, 0xD3, 0xEE));
         private static readonly Brush DarkText = Frozen(Color.FromRgb(0x0B, 0x1A, 0x4A));
 
-        private readonly List<Border> _photos = new();  // две фотографии периода (images[0], images[1])
-        private readonly List<Border> _ovals = new();   // овал с портретом (images[2])
-        private readonly List<double> _photoRatios = new();   // пропорции (ширина / высота) двух фотографий
+        private readonly List<Border> _photos = new();   // все фотографии страницы (для анимации появления)
+        private readonly List<Border> _ovals = new();    // овалы с портретами руководителей
         private const double MaxPhotoHeight = 450;       // максимальная высота ряда с фотографиями
+        private const double PhotoGap = 50;              // расстояние между двумя фотографиями в ряду
+
+        // Файлы вида 1956_1.jpg - обычные фотографии периода; всё остальное (Gluskin.png, Hrapko.png...) - портреты руководителей
+        private static readonly System.Text.RegularExpressions.Regex PhotoNameRegex =
+            new(@"^\d{4}_\d+$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>Картинка + подпись: передаётся в просмотр на весь экран.</summary>
+        private sealed record PhotoInfo(ImageSource Source, string? Title, string? Description);
+
+        /// <summary>Ряд из одной или двух фотографий.</summary>
+        private sealed class PhotoRow
+        {
+            public Grid Host = null!;
+            public readonly List<Border> Items = new();
+            public readonly List<double> Ratios = new();
+        }
 
         public DetailsPage()
         {
             InitializeComponent();
-            PhotosGrid.SizeChanged += (_, _) => FitPhotos();
         }
 
         private static Brush Frozen(Color c)
@@ -49,87 +63,104 @@ namespace GgpkTimeline.Controls
             TitleText.Text = period.Year;
             SubTitleText.Text = period.Title;
             SubTitleText.Visibility = string.IsNullOrWhiteSpace(period.Title) ? Visibility.Collapsed : Visibility.Visible;
-            IntroText.Text = period.Text;
-            IntroText.Visibility = string.IsNullOrWhiteSpace(period.Text) ? Visibility.Collapsed : Visibility.Visible;
 
             var images = period.Images ?? new List<PeriodImage>();
-            var photos = images.Take(2).ToList();      // images[0], images[1] - две фотографии в ряд
-            var portraits = images.Skip(2).ToList();   // images[2] - портрет с заголовком и описанием
+            var photos = images.Where(i => !IsPortrait(i)).ToList();   // обычные фотографии периода
+            var portraits = images.Where(IsPortrait).ToList();         // портреты руководителей
 
             Lightbox.Visibility = Visibility.Collapsed;   // закрыть просмотр, если был открыт
             Lightbox.Opacity = 0;
 
-            BuildPhotos(photos);
-            BuildDetails(period.Details, portraits);
+            BuildContent(period, photos, portraits);
             BuildPortraits(portraits);
 
             DetailsScroller.ScrollToTop();
         }
 
-        /// <summary>Две фотографии периода (images[0] и images[1]) - в один ряд, на месте бывших бежевых блоков.</summary>
-        private void BuildPhotos(List<PeriodImage> photos)
+        /// <summary>Портрет - картинка, имя файла которой не похоже на "год_номер" (например Assets/Years/Gluskin.png).</summary>
+        private static bool IsPortrait(PeriodImage img)
         {
-            PhotosGrid.Children.Clear();
-            PhotosGrid.ColumnDefinitions.Clear();
-            _photos.Clear();
-            _photoRatios.Clear();
-
-            for (int i = 0; i < photos.Count; i++)
-            {
-                var photo = CreatePhoto(photos[i].File, out double ratio);
-                _photoRatios.Add(ratio);
-
-                if (photo.Tag is ImageSource photoSource)
-                {
-                    photo.Cursor = Cursors.Hand;
-                    photo.MouseLeftButtonUp += (_, _) => OpenLightbox(photoSource);
-                }
-
-                // ширина колонки пропорциональна пропорциям фото - фотографии одной высоты, без обрезки
-                PhotosGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ratio, GridUnitType.Star) });
-
-                photo.Margin = photos.Count == 2
-                    ? (i == 0 ? new Thickness(0, 0, 25, 0) : new Thickness(25, 0, 0, 0))
-                    : new Thickness(0);
-                Grid.SetColumn(photo, i);
-                PhotosGrid.Children.Add(photo);
-                _photos.Add(photo);
-            }
-            PhotosGrid.Visibility = photos.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-            FitPhotos();
-        }
-
-        /// <summary>Подгоняет размер рамок под пропорции картинок: общая высота, ширина по пропорции - ничего не обрезается.</summary>
-        private void FitPhotos()
-        {
-            if (_photos.Count == 0 || PhotosGrid.ActualWidth <= 0) return;
-
-            double gap = _photos.Count == 2 ? 50 : 0;   // 25 + 25 между фотографиями
-            double height = Math.Min(MaxPhotoHeight, (PhotosGrid.ActualWidth - gap) / _photoRatios.Sum());
-
-            for (int i = 0; i < _photos.Count; i++)
-            {
-                _photos[i].Height = height;
-                _photos[i].Width = height * _photoRatios[i];
-            }
+            var name = Path.GetFileNameWithoutExtension(img.File ?? "");
+            return !PhotoNameRegex.IsMatch(name);
         }
 
         /// <summary>
-        /// Абзацы из details - обычным текстом под фотографиями.
-        /// Абзац, который повторяет заголовок/описание портрета, пропускается (он уже выводится рядом с портретом).
+        /// Основная часть страницы: абзац - две фотографии - абзац - две фотографии - ...
+        /// Если фотографий нечётное число, последняя стоит одна по центру.
+        /// Если абзацы закончились раньше фотографий, оставшиеся ряды идут подряд; если наоборот - оставшийся текст идёт без фотографий.
         /// </summary>
-        private void BuildDetails(List<string> details, List<PeriodImage> portraits)
+        private void BuildContent(Period period, List<PeriodImage> photos, List<PeriodImage> portraits)
         {
-            ExtraPanel.Children.Clear();
+            ContentPanel.Children.Clear();
+            _photos.Clear();
 
-            var items = (details ?? new List<string>())
-                .Where(d => !string.IsNullOrWhiteSpace(d))
-                .Where(d => !DuplicatesPortrait(d, portraits))
-                .ToList();
+            // абзацы: вступление (text) + details, кроме абзацев, которые повторяют подпись к портрету
+            var texts = new List<(string Text, double Size)>();
+            if (!string.IsNullOrWhiteSpace(period.Text))
+                texts.Add((period.Text, 22));
+            foreach (var d in period.Details ?? new List<string>())
+            {
+                if (string.IsNullOrWhiteSpace(d) || DuplicatesPortrait(d, portraits)) continue;
+                texts.Add((d, 20));
+            }
 
-            foreach (var item in items)
-                ExtraPanel.Children.Add(CreateParagraph(item, 18));
-            ExtraPanel.Visibility = items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            // фотографии по две
+            var groups = new List<List<PeriodImage>>();
+            for (int i = 0; i < photos.Count; i += 2)
+                groups.Add(photos.Skip(i).Take(2).ToList());
+
+            int g = 0;
+            foreach (var (text, size) in texts)
+            {
+                bool photosFollow = g < groups.Count;
+                ContentPanel.Children.Add(CreateParagraph(text, size, photosFollow ? 35 : 25));
+                if (photosFollow)
+                    ContentPanel.Children.Add(CreatePhotoRow(groups[g++]));
+            }
+            while (g < groups.Count)
+                ContentPanel.Children.Add(CreatePhotoRow(groups[g++]));
+        }
+
+        /// <summary>Ряд из одной или двух фотографий. Одна фотография - по центру. Ничего не обрезается.</summary>
+        private Grid CreatePhotoRow(List<PeriodImage> items)
+        {
+            var row = new PhotoRow();
+            var strip = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center   // единственная фотография оказывается по центру
+            };
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                var photo = CreatePhoto(items[i], out double ratio);
+                photo.Margin = new Thickness(i == 0 ? 0 : PhotoGap, 0, 0, 0);
+                strip.Children.Add(photo);
+                row.Items.Add(photo);
+                row.Ratios.Add(ratio);
+                _photos.Add(photo);
+            }
+
+            row.Host = new Grid { Margin = new Thickness(0, 0, 0, 50) };
+            row.Host.Children.Add(strip);
+            row.Host.SizeChanged += (_, _) => FitRow(row);
+            return row.Host;
+        }
+
+        /// <summary>Подгоняет размер рамок под пропорции картинок: общая высота ряда, ширина по пропорции - ничего не обрезается.</summary>
+        private static void FitRow(PhotoRow row)
+        {
+            double width = row.Host.ActualWidth;
+            if (row.Items.Count == 0 || width <= 0) return;
+
+            double gap = PhotoGap * (row.Items.Count - 1);
+            double height = Math.Min(MaxPhotoHeight, (width - gap) / row.Ratios.Sum());
+
+            for (int i = 0; i < row.Items.Count; i++)
+            {
+                row.Items[i].Height = height;
+                row.Items[i].Width = height * row.Ratios[i];
+            }
         }
 
         /// <summary>true, если абзац - это "Заголовок - описание" портрета, уже показанный рядом с ним.</summary>
@@ -153,7 +184,7 @@ namespace GgpkTimeline.Controls
             return false;
         }
 
-        /// <summary>Портрет (images[2]): овал с фото слева, заголовок и описание справа.</summary>
+        /// <summary>Портрет руководителя: овал с фото слева, заголовок и описание справа.</summary>
         private void BuildPortraits(List<PeriodImage> images)
         {
             ImagesPanel.Children.Clear();
@@ -161,7 +192,7 @@ namespace GgpkTimeline.Controls
 
             foreach (var img in images)
             {
-                var row = new Grid { Margin = new Thickness(0, 0, 0, 60) };
+                var row = new Grid { Margin = new Thickness(0, 20, 0, 60) };
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(400) });
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -184,7 +215,8 @@ namespace GgpkTimeline.Controls
                 {
                     oval.Background = new ImageBrush(source) { Stretch = Stretch.UniformToFill };
                     oval.Cursor = Cursors.Hand;
-                    oval.MouseLeftButtonUp += (_, _) => OpenLightbox(source);
+                    var info = new PhotoInfo(source, img.Title, img.Description);
+                    oval.MouseLeftButtonUp += (_, _) => OpenLightbox(info);
                 }
 
                 Grid.SetColumn(oval, 0);
@@ -209,7 +241,7 @@ namespace GgpkTimeline.Controls
                     });
                 }
                 if (!string.IsNullOrWhiteSpace(img.Description))
-                    text.Children.Add(CreateParagraph(img.Description, 0));
+                    text.Children.Add(CreateParagraph(img.Description, 20, 0));
 
                 Grid.SetColumn(text, 1);
                 row.Children.Add(text);
@@ -218,17 +250,17 @@ namespace GgpkTimeline.Controls
             }
         }
 
-        private static TextBlock CreateParagraph(string text, double bottom) => new TextBlock
+        private static TextBlock CreateParagraph(string text, double fontSize, double bottom) => new TextBlock
         {
             Text = text,
-            FontSize = 20,
-            LineHeight = 30,
+            FontSize = fontSize,
+            LineHeight = Math.Round(fontSize * 1.5),
             Foreground = SoftText,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, bottom)
         };
 
-        private static Border CreatePhoto(string file, out double ratio)
+        private Border CreatePhoto(PeriodImage img, out double ratio)
         {
             var photo = new Border
             {
@@ -243,12 +275,14 @@ namespace GgpkTimeline.Controls
             };
 
             ratio = 1.5;   // для заглушки, если файла нет
-            var source = LoadImage(file);
+            var source = LoadImage(img.File);
             if (source != null)
             {
                 if (source.Height > 0) ratio = source.Width / source.Height;
                 photo.Background = new ImageBrush(source) { Stretch = Stretch.Fill };   // рамка уже по пропорции картинки
-                photo.Tag = source;   // для просмотра на весь экран
+                photo.Cursor = Cursors.Hand;
+                var info = new PhotoInfo(source, img.Title, img.Description);
+                photo.MouseLeftButtonUp += (_, _) => OpenLightbox(info);
             }
 
             // Наведение: фото чуть увеличивается, рамка становится оранжевой
@@ -311,14 +345,15 @@ namespace GgpkTimeline.Controls
             Fade(BodyPanel, 800, 300, easeOut);
             Slide(BodyShift, 40, 800, 300, easeOut);
 
-            // 4. Две фотографии периода
+            // 4. Фотографии периода (задержка растёт по порядку, но не больше 600 мс - нижние не ждут долго)
             for (int i = 0; i < _photos.Count; i++)
             {
-                Fade(_photos[i], 600, 500 + i * 100, easeOut);
-                Pop(_photos[i], 0.9, 600, 500 + i * 100, easeOut);
+                int delay = 500 + Math.Min(i, 6) * 100;
+                Fade(_photos[i], 600, delay, easeOut);
+                Pop(_photos[i], 0.9, 600, delay, easeOut);
             }
 
-            // 5. Овал с портретом
+            // 5. Овал с портретом руководителя
             for (int i = 0; i < _ovals.Count; i++)
             {
                 Fade(_ovals[i], 700, 700 + i * 150, easeOut);
@@ -360,9 +395,15 @@ namespace GgpkTimeline.Controls
         // =====================================================================
         //  Просмотр картинки на весь экран
         // =====================================================================
-        private void OpenLightbox(ImageSource source)
+        private void OpenLightbox(PhotoInfo info)
         {
-            LightboxImage.Source = source;
+            LightboxImage.Source = info.Source;
+
+            LightboxTitle.Text = info.Title ?? "";
+            LightboxTitle.Visibility = string.IsNullOrWhiteSpace(info.Title) ? Visibility.Collapsed : Visibility.Visible;
+            LightboxDescription.Text = info.Description ?? "";
+            LightboxDescription.Visibility = string.IsNullOrWhiteSpace(info.Description) ? Visibility.Collapsed : Visibility.Visible;
+
             Lightbox.Visibility = Visibility.Visible;
             Lightbox.Focus();   // чтобы работал Esc
 
