@@ -45,7 +45,7 @@ namespace GgpkTimeline
         // ===== «Начать» — открыть главное окно проекта =====
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
-            // Если главное окно у вас называется не MainWindow — замените имя здесь
+         
             var main = new MainWindow();
             Application.Current.MainWindow = main;
             main.Show();

@@ -27,10 +27,6 @@ namespace GgpkTimeline.Controls
             CloseRequested?.Invoke();
         }
 
-        // Кнопка "О программе" — пока заглушка
-        private void InfoButton_Click(object sender, RoutedEventArgs e)
-        {
-            // TODO: действие появится позже
-        }
+       
     }
 }

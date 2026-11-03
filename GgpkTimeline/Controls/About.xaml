@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              FontFamily="{StaticResource MainFont}">
 
-    <!-- Спокойный градиентный фон вместо плоского синего -->
+    <!-- Спокойный градиентный фон -->
     <UserControl.Background>
         <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
             <GradientStop Color="#0E1F5C" Offset="0"/>
@@ -12,7 +12,7 @@
     </UserControl.Background>
 
     <UserControl.Resources>
-        <!-- Оранжевая кнопка (заглушка), без свечения -->
+        <!-- Оранжевая кнопка -->
         <Style x:Key="OrangeButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontSize" Value="17"/>
@@ -38,7 +38,7 @@
             </Setter>
         </Style>
 
-        <!-- Кнопка закрытия (круглая, спокойная) -->
+        <!-- Кнопка закрытия  -->
         <Style x:Key="CloseButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="46"/>
             <Setter Property="Height" Value="46"/>
@@ -73,7 +73,7 @@
             <Setter Property="Margin" Value="0,0,0,22"/>
         </Style>
 
-        <!-- Обычные абзацы: мягкий светло-голубой, а не чисто белый -->
+        <!-- Обычные абзацы  -->
         <Style x:Key="Paragraph" TargetType="TextBlock">
             <Setter Property="FontSize" Value="20"/>
             <Setter Property="Foreground" Value="#C9D3EE"/>
@@ -94,12 +94,12 @@
                              Storyboard.TargetProperty="Opacity"
                              From="0" To="1" BeginTime="0:0:0.2" Duration="0:0:0.6"/>
 
-            <!-- Логотип на фоне (To — яркость логотипа, 0..1) -->
+            <!-- Логотип на фоне -->
             <DoubleAnimation Storyboard.TargetName="LogoBg"
                              Storyboard.TargetProperty="Opacity"
                              From="0" To="0.18" Duration="0:0:1.5"/>
 
-            <!-- Заголовок: fade + сдвиг сверху вниз -->
+            <!-- Заголовок  -->
             <DoubleAnimation Storyboard.TargetName="TitleText"
                              Storyboard.TargetProperty="Opacity"
                              From="0" To="1" Duration="0:0:0.8"/>
@@ -135,7 +135,7 @@
     </UserControl.Resources>
 
     <Grid>
-        <!-- Логотип колледжа на заднем плане (растягивается под окно) -->
+        <!-- Логотип колледжа на заднем плане  -->
         <Image x:Name="LogoBg"
                Source="pack://application:,,,/Assets/about_logo.png"
                Stretch="Uniform"
@@ -144,7 +144,7 @@
                Opacity="0"
                IsHitTestVisible="False"/>
 
-        <!-- Весь контент масштабируется под размер окна (адаптив, без прокрутки) -->
+        <!-- Весь контент масштабируется под размер окна  -->
         <Viewbox Stretch="Uniform" Margin="20,10,20,20">
             <Grid Width="1100" Height="780">
                 <Grid.RowDefinitions>
@@ -173,7 +173,7 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Текст и флаг (без рамки-карточки) -->
+                <!-- Текст и флаг  -->
                 <StackPanel x:Name="BodyPanel" Grid.Row="1"
                             MaxWidth="900" Margin="0,34,0,0"
                             VerticalAlignment="Top" HorizontalAlignment="Center"
@@ -214,15 +214,15 @@
             </Grid>
         </Viewbox>
 
-        <!-- Кнопка в левом верхнем углу окна (не масштабируется вместе с текстом) -->
+        <!-- Кнопка в левом верхнем углу окна  -->
         <Button x:Name="InfoButton"
                 Content="О программе"
                 Style="{StaticResource OrangeButton}"
                 HorizontalAlignment="Left" VerticalAlignment="Top"
                 Margin="24,20,0,0"
-                Opacity="0" Click="InfoButton_Click"/>
+                Opacity="0" />
 
-        <!-- Закрыть страницу (справа сверху) -->
+        <!-- Закрыть страницу -->
         <Button x:Name="CloseButton"
                 Content="✕"
                 Style="{StaticResource CloseButtonStyle}"

@@ -12,7 +12,7 @@
         PreviewMouseLeftButtonUp="Window_PreviewMouseUp">
 
     <Grid>
-        <!-- Фон: PreMain.png (1920x1080 на экране, пикселей больше - для чёткости) -->
+        <!-- Фон: PreMain.png  -->
         <Grid.Background>
             <ImageBrush ImageSource="Assets/PreMain.png" Stretch="UniformToFill"/>
         </Grid.Background>

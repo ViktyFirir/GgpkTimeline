@@ -10,7 +10,7 @@ public partial class TimelineSection : UserControl
     public Period Period { get; }
     public bool Revealed { get; private set; }
 
-    /// <summary>Нажата кнопка «Читать подробнее» (пока заглушка)</summary>
+    /// <summary>Нажата кнопка «Читать подробнее» </summary>
     public event Action<TimelineSection>? DetailsRequested;
 
     public TimelineSection(Period period)

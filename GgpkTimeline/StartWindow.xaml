@@ -166,7 +166,7 @@
             </Canvas>
         </Viewbox>
 
-        <!-- Страница «О проекте» поверх стартового экрана (открывается кнопкой «О проекте») -->
+        <!-- Страница «О проекте» -->
         <controls:About x:Name="AboutPage" Visibility="Collapsed"/>
     </Grid>
 </Window>

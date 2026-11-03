@@ -10,7 +10,7 @@ public partial class InfoCard : UserControl
 {
     public Period? Period { get; private set; }
 
-    /// <summary>Нажата «Читать подробнее» (пока заглушка)</summary>
+    /// <summary>Нажата «Читать подробнее»</summary>
     public event Action<Period>? DetailsRequested;
 
     private int _swapId;

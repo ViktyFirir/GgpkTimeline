@@ -15,7 +15,7 @@ public partial class MainWindow : Window
     // ---- Размеры макета (дизайн 1920x1080) ----
     private const double StageWidth = 1920;
     private const double FooterTop = 980;      // верхняя граница футера
-    private const double CityHeight = 640;     // высота города на экране (масштаб ~2.8)
+    private const double CityHeight = 640;     // высота города на экране 
     private const double YearLeft = 816;       // положение года
     private const double YearTop = 305;       // выше = меньше число
     private const double CityStretchX = 1.0;     // растяжение города по горизонтали (1.0 = как в файле)
@@ -33,7 +33,7 @@ public partial class MainWindow : Window
     private int _index;          // текущая позиция
     private double _cityPan;     // на сколько пикселей город может сдвинуться
 
-    // ---- Прогресс ленты: 0 ... (n-1). По нему сдвигается город ----
+
     public static readonly DependencyProperty ProgressProperty =
         DependencyProperty.Register(nameof(Progress), typeof(double), typeof(MainWindow),
             new PropertyMetadata(0.0, (d, e) => ((MainWindow)d).ApplyProgress((double)e.NewValue)));
@@ -50,9 +50,7 @@ public partial class MainWindow : Window
         DetailsPageView.CloseRequested += CloseDetails;   // крестик на странице «Подробнее»
     }
 
-    // =====================================================================
     //  Запуск
-    // =====================================================================
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         if (!LoadData()) { Close(); return; }
@@ -93,9 +91,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // =====================================================================
     //  Город: одна картинка на весь проект
-    // =====================================================================
     private void BuildCity()
     {
         var src = (BitmapSource)City.Source;
@@ -116,9 +112,7 @@ public partial class MainWindow : Window
         CityShift.X = -(p / (_n - 1)) * _cityPan;
     }
 
-    // =====================================================================
     //  Год-барабан и финальная надпись (стоят на месте, позади города)
-    // =====================================================================
     private void BuildYear()
     {
         var cream = new SolidColorBrush(Color.FromRgb(0xFF, 0xF8, 0xF0));
@@ -166,9 +160,7 @@ public partial class MainWindow : Window
         st.BeginAnimation(ScaleTransform.ScaleYProperty, a);
     }
 
-    // =====================================================================
     //  Футер: кружки + подписи
-    // =====================================================================
     private void BuildFooter()
     {
         double first = 511, pitch = 180;           // как в макете
@@ -228,9 +220,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // =====================================================================
     //  Анимация при запуске
-    // =====================================================================
     private void PlayIntro()
     {
         var easeOut = new CubicEase { EasingMode = EasingMode.EaseOut };
@@ -285,9 +275,7 @@ public partial class MainWindow : Window
         timer.Start();
     }
 
-    // =====================================================================
     //  Навигация: двигается только город, год и текст меняются на месте
-    // =====================================================================
     private void NavigateTo(int index)
     {
         index = Math.Clamp(index, 0, _n - 1);
@@ -352,9 +340,8 @@ public partial class MainWindow : Window
         FooterLabel.BeginAnimation(OpacityProperty, new DoubleAnimation(0.2, 1, TimeSpan.FromMilliseconds(300)));
     }
 
-    // =====================================================================
+    
     //  Управление: колесо, стрелки, свайп мышью/пальцем
-    // =====================================================================
     private DateTime _lastWheel = DateTime.MinValue;
     private double _wheelAcc;
 
@@ -407,9 +394,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // =====================================================================
     //  Клик по логотипу - возврат на главный (стартовый) экран
-    // =====================================================================
     private void Logo_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => GoHome();
 
     private void GoHome()
@@ -420,9 +405,9 @@ public partial class MainWindow : Window
         Close();
     }
 
-    // =====================================================================
+    
     //  Кнопка «Читать подробнее» - страница с подробностями периода
-    // =====================================================================
+
     private int _detailsToken;   // защита от гонки: закрыли и сразу открыли снова
 
     private bool DetailsOpen => DetailsPageView.Visibility == Visibility.Visible;
@@ -450,17 +435,4 @@ public partial class MainWindow : Window
         DetailsPageView.BeginAnimation(OpacityProperty, fade);
     }
 
-    // =====================================================================
-    //  Всплывающее сообщение (оставлено на будущее)
-    // =====================================================================
-    private void ShowToast(string text)
-    {
-        ToastText.Text = text;
-        var anim = new DoubleAnimationUsingKeyFrames();
-        anim.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-        anim.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(250))));
-        anim.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2450))));
-        anim.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2850))));
-        Toast.BeginAnimation(OpacityProperty, anim);
-    }
 }

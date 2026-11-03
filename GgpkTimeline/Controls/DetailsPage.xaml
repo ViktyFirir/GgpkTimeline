@@ -14,7 +14,7 @@
     </UserControl.Background>
 
     <Grid>
-        <!-- Прокрутка на всю страницу. Полоса скрыта (Hidden), но прокрутка колёсиком работает -->
+        <!-- Прокрутка на всю страницу  -->
         <ScrollViewer x:Name="DetailsScroller"
                       VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollBarVisibility="Disabled"
@@ -24,8 +24,7 @@
             <!-- Внутренний Grid: картинка-фон + линия + контент -->
             <Grid>
 
-                <!-- Фон шапки: Assets/DetailFon.png. Подключается в коде (DetailsPage.xaml.cs),
-                     поэтому если файла нет - страница всё равно открывается, просто без картинки -->
+                
 
                 <Image x:Name="HeaderBg"
                        Source="pack://application:,,,/Assets/DetailFon.png"
